@@ -42,6 +42,10 @@
 
 /* USER CODE BEGIN Includes */
 
+char aTxBuffer[1024]; // maximum of 1024 chars out - no error checking
+char aRxBuffer[10]; // maximum of 10 chars in - no error checking
+
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -74,10 +78,19 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-int8_t a=1;
-state npress = pin_reset;
-int16_t time=400;
-char text[]="i am fast slow fun and \r\n";
+
+	uint8_t spi_tx_data[2] = {0x00, 0x00}; //data,command = set to NOP command initially
+	uint8_t spi_data=0;
+	uint8_t spi_command=0;
+	int8_t a=1;
+	state npress = pin_reset;
+	int16_t time=400;
+	char text[]="i am fast slow fun and \r\n";
+
+	// buffer to receive commands - no error checking
+	uint8_t command_buffer[1024]; // set up command buffer & write pointer to it
+	uint8_t command_buffer_rx=0;
+	uint8_t command_received = 0; // set to 1 when we get a CR to indicate a command
 
   /* USER CODE END 1 */
 
@@ -102,6 +115,10 @@ char text[]="i am fast slow fun and \r\n";
   MX_USART2_UART_Init();
 
   /* USER CODE BEGIN 2 */
+  spi_command=0;
+  spi_data=0;
+  spi_tx_data[1]=spi_command;
+  spi_tx_data[0]=spi_data;
 
   /* USER CODE END 2 */
 
