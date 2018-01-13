@@ -86,6 +86,7 @@ int main(void)
 	state npress = pin_reset;
 	int16_t time=400;
 	char text[]="i am fast slow fun and \r\n";
+	int f;
 
 	// buffer to receive commands - no error checking
 	uint8_t command_buffer[1024]; // set up command buffer & write pointer to it
@@ -127,12 +128,57 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
+	  if (HAL_UART_Receive(&huart2,(uint8_t *) aRxBuffer, 1, 10) == HAL_OK) // wait 10ms for a character
+	  {
+		  for (f=0;f<strlen(aRxBuffer);f++)
+		  {
+			  command_buffer[command_buffer_rx++] = aRxBuffer[f];
+			  if (aRxBuffer[f] == 13) //CR
+			  {
+				  command_buffer[command_buffer_rx] = 0; // terminate string
+				  command_received = 1; // indicate command ready to be processed
+			  }
+		  }
+	  }
+	  // if we have received a complete command ( terminated by CR ), echo it out
+	 if (command_received != 0)
+		  {
+		 	// echo out the command
+			sprintf(aTxBuffer, "Received: %s\n",command_buffer);
+			HAL_UART_Transmit(&huart2,&aTxBuffer, strlen(aTxBuffer), 5000);
 
+			// no checking for command being formatted correctly
+			// commands are:
+			// pxx where xx = 00 to 99 - sets pwm width
+
+			switch (command_buffer[0])
+			{
+			case 't':
+				sprintf(aTxBuffer, "PWM set to: %d\n",pwm_value);
+				HAL_UART_Transmit(&huart2,(uint8_t *) aTxBuffer, strlen(aTxBuffer), 5000);
+				break;
+			case 'v':
+				averaging = ((command_buffer[1]-'0') * 10) + (command_buffer[2]-'0');
+				sprintf(aTxBuffer, "Averaging set to: %d\n",averaging);
+				HAL_UART_Transmit(&huart2,(uint8_t *) aTxBuffer, strlen(aTxBuffer), 5000);
+				break;
+			case '?':
+				print_instructions();
+				break;
+
+			default: // not recognised
+				break;
+			}
+			// reset command buffer ready for the next command
+			command_received = 0;
+			command_buffer_rx = 0;
+		  }
   /* USER CODE BEGIN 3 */
 	  if(( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_reset) && (a<=3)){
 	 		npress=pin_set;
 	 			a++;
-	 			HAL_UART_Transmit(&huart2,&text,(uint16_t) sizeof(text),0xFFF);
+	 			sprintf(aTxBuffer, "time %d\n",time>>a);
+	 			HAL_UART_Transmit(&huart2,&aTxBuffer,(uint16_t) sizeof(text),0xFFF);
 	 		 } else if( ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_set)&& (a<=3)) {
 	 			 npress=pin_set;
 	 		 } else if ( ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_set)&& (a>3)){
