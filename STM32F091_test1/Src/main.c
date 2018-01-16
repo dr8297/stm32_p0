@@ -135,25 +135,27 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
-	  if (HAL_UART_Receive(&huart2,(uint8_t *) aRxBuffer, 1, 10) == HAL_OK) // wait 10ms for a character
+	  /* the line below is polling for the uart */
+	  if (HAL_UART_Receive(&huart2,&aRxBuffer, 1, 10) == HAL_OK) // wait 10ms for a character
 	  {
 		  for (f=0;f<strlen(aRxBuffer);f++)
 		  {
 			  command_buffer[command_buffer_rx++] = aRxBuffer[f];
-				HAL_UART_Transmit(&huart2, (int8_t *)command_buffer+f, 1, 5000); //echo type
+			  HAL_UART_Transmit(&huart2, &command_buffer[command_buffer_rx], 1, 100); //echo type
+
 			  if (aRxBuffer[f] == 13) //CR
 			  {
-				  command_buffer[command_buffer_rx] = 0; // terminate string
+				  command_buffer[command_buffer_rx-1] = 0; // terminate string and remoce CR
 				  command_received = 1; // indicate command ready to be processed
 			  }
 		  }
-	  }
+
 	  // if we have received a complete command ( terminated by CR ), echo it out
 	 if (command_received != 0)
 		  {
 		 	// echo out the command
-			sprintf(aTxBuffer, "received: %s \n\r",command_buffer);
-			HAL_UART_Transmit(&huart2, (int8_t *)aTxBuffer, strlen(aTxBuffer), 5000);
+			sprintf(aTxBuffer, "Received: %s \n\r",command_buffer);
+			HAL_UART_Transmit(&huart2, &aTxBuffer, strlen(aTxBuffer)+3, 5000);
 
 			// no checking for command being formatted correctly
 			// commands are:
@@ -163,12 +165,12 @@ int main(void)
 			{
 			case 't':
 				sprintf(aTxBuffer, "time is %d \n\r",time);
-				HAL_UART_Transmit(&huart2,(uint8_t *)aTxBuffer, strlen(aTxBuffer), 5000);
+				HAL_UART_Transmit(&huart2,&aTxBuffer, strlen(aTxBuffer), 5000);
 				break;
 			case 'v':
 				value = ((command_buffer[1]-'0') * 10) + (command_buffer[2]-'0');
 				sprintf(aTxBuffer, "Averaging set to: %d\n\r",value);
-				HAL_UART_Transmit(&huart2,(uint8_t *) aTxBuffer, strlen(aTxBuffer), 5000);
+				HAL_UART_Transmit(&huart2,&aTxBuffer, strlen(aTxBuffer), 5000);
 				break;
 			case '?':
 				print_menu();
@@ -181,12 +183,13 @@ int main(void)
 			command_received = 0;
 			command_buffer_rx = 0;
 		  }
+}
   /* USER CODE BEGIN 3 */
 	  if(( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_reset) && (a<=3)){
 	 		npress=pin_set;
 	 			a++;
-	 			sprintf(aTxBuffer, "time %d \n\r",time>>a);
-	 			HAL_UART_Transmit(&huart2,(int8_t *)aTxBuffer,(uint16_t) strlen(aTxBuffer),0xFFF);
+	 			sprintf(aTxBuffer, "time %d\n\r",time>>a);
+	 			HAL_UART_Transmit(&huart2,&aTxBuffer,strlen(aTxBuffer)+2,0xFFF);
 	 		 } else if( ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_set)&& (a<=3)) {
 	 			 npress=pin_set;
 	 		 } else if ( ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_set)&& (a>3)){
@@ -325,10 +328,16 @@ static void MX_GPIO_Init(void)
 
 void print_menu (void){
 	sprintf(aTxBuffer, "pxx where xx is a number from 0 to 99. It changes the time \n\r");
-	HAL_UART_Transmit(&huart2,(uint8_t *)aTxBuffer, strlen(aTxBuffer)+3, 5000); //include character array
+	HAL_UART_Transmit(&huart2,&aTxBuffer, strlen(aTxBuffer)+3, 5000); //include character array
 	sprintf(aTxBuffer, "print this menu \n\r");
-	HAL_UART_Transmit(&huart2,(uint8_t *)aTxBuffer, strlen(aTxBuffer)+3, 5000); //include character array
+	HAL_UART_Transmit(&huart2,&aTxBuffer, strlen(aTxBuffer)+3, 5000); //include character array
 }
+
+/* Format the transmit buffer */
+
+int format_transmmit_buffer (char * tx_buffer, char * message, char * data_string){
+}
+
 void _Error_Handler(char * file, int line)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
