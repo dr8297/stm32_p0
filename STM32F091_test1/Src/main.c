@@ -39,7 +39,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f0xx_hal.h"
-
+#include "stdio.h";
+#include <string.h>
 /* USER CODE BEGIN Includes */
 
 char aTxBuffer[1024]; // maximum of 1024 chars out - no error checking
@@ -64,6 +65,7 @@ typedef enum {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+void print_menu(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -85,13 +87,14 @@ int main(void)
 	int8_t a=1;
 	state npress = pin_reset;
 	int16_t time=400;
-	char text[]="i am fast slow fun and \r\n";
+	//char text[]="i am fast slow fun and \r\n";
 	int f;
 
 	// buffer to receive commands - no error checking
 	uint8_t command_buffer[1024]; // set up command buffer & write pointer to it
 	uint8_t command_buffer_rx=0;
 	uint8_t command_received = 0; // set to 1 when we get a CR to indicate a command
+	uint8_t value;
 
   /* USER CODE END 1 */
 
@@ -121,6 +124,10 @@ int main(void)
   spi_tx_data[1]=spi_command;
   spi_tx_data[0]=spi_data;
 
+  /* print the menu */
+
+  print_menu();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -133,6 +140,7 @@ int main(void)
 		  for (f=0;f<strlen(aRxBuffer);f++)
 		  {
 			  command_buffer[command_buffer_rx++] = aRxBuffer[f];
+				HAL_UART_Transmit(&huart2, (int8_t *)command_buffer+f, 1, 5000); //echo type
 			  if (aRxBuffer[f] == 13) //CR
 			  {
 				  command_buffer[command_buffer_rx] = 0; // terminate string
@@ -144,8 +152,8 @@ int main(void)
 	 if (command_received != 0)
 		  {
 		 	// echo out the command
-			sprintf(aTxBuffer, "Received: %s\n",command_buffer);
-			HAL_UART_Transmit(&huart2,&aTxBuffer, strlen(aTxBuffer), 5000);
+			sprintf(aTxBuffer, "received: %s \n\r",command_buffer);
+			HAL_UART_Transmit(&huart2, (int8_t *)aTxBuffer, strlen(aTxBuffer), 5000);
 
 			// no checking for command being formatted correctly
 			// commands are:
@@ -154,16 +162,16 @@ int main(void)
 			switch (command_buffer[0])
 			{
 			case 't':
-				sprintf(aTxBuffer, "PWM set to: %d\n",pwm_value);
-				HAL_UART_Transmit(&huart2,(uint8_t *) aTxBuffer, strlen(aTxBuffer), 5000);
+				sprintf(aTxBuffer, "time is %d \n\r",time);
+				HAL_UART_Transmit(&huart2,(uint8_t *)aTxBuffer, strlen(aTxBuffer), 5000);
 				break;
 			case 'v':
-				averaging = ((command_buffer[1]-'0') * 10) + (command_buffer[2]-'0');
-				sprintf(aTxBuffer, "Averaging set to: %d\n",averaging);
+				value = ((command_buffer[1]-'0') * 10) + (command_buffer[2]-'0');
+				sprintf(aTxBuffer, "Averaging set to: %d\n\r",value);
 				HAL_UART_Transmit(&huart2,(uint8_t *) aTxBuffer, strlen(aTxBuffer), 5000);
 				break;
 			case '?':
-				print_instructions();
+				print_menu();
 				break;
 
 			default: // not recognised
@@ -177,8 +185,8 @@ int main(void)
 	  if(( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_reset) && (a<=3)){
 	 		npress=pin_set;
 	 			a++;
-	 			sprintf(aTxBuffer, "time %d\n",time>>a);
-	 			HAL_UART_Transmit(&huart2,&aTxBuffer,(uint16_t) sizeof(text),0xFFF);
+	 			sprintf(aTxBuffer, "time %d \n\r",time>>a);
+	 			HAL_UART_Transmit(&huart2,(int8_t *)aTxBuffer,(uint16_t) strlen(aTxBuffer),0xFFF);
 	 		 } else if( ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_set)&& (a<=3)) {
 	 			 npress=pin_set;
 	 		 } else if ( ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin)==GPIO_PIN_SET) && (npress==pin_set)&& (a>3)){
@@ -314,6 +322,13 @@ static void MX_GPIO_Init(void)
   * @param  None
   * @retval None
   */
+
+void print_menu (void){
+	sprintf(aTxBuffer, "pxx where xx is a number from 0 to 99. It changes the time \n\r");
+	HAL_UART_Transmit(&huart2,(uint8_t *)aTxBuffer, strlen(aTxBuffer)+3, 5000); //include character array
+	sprintf(aTxBuffer, "print this menu \n\r");
+	HAL_UART_Transmit(&huart2,(uint8_t *)aTxBuffer, strlen(aTxBuffer)+3, 5000); //include character array
+}
 void _Error_Handler(char * file, int line)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
